@@ -2,55 +2,92 @@ import { useState } from "react";
 import NoteContext from "./NoteContext";
 
 const NoteState = (props) => {
-    const notesInitial = [
-        {
-            "_id": "6540e357c2b6a43275ff3465",
-            "user": "65400ab2961d7a194f13022d",
-            "title": "My title",
-            "description": "Please wake up early",
-            "tag": "Personal",
-            "date": "2023-10-31T11:21:59.273Z",
-            "__v": 0
-        },
-        {
-            "_id": "65412442102dd91bbe258b83",
-            "user": "65400ab2961d7a194f13022d",
-            "title": "My title",
-            "description": "Please wake up early",
-            "tag": "Personal",
-            "date": "2023-10-31T15:58:58.133Z",
-            "__v": 0
-        },
+    const host = "http://localhost:8000";
 
-    ]
-
-    const [notes, setNotes] = useState(notesInitial);
+    const [notes, setNotes] = useState([]);
 
     //Add a note
-    const addNote = (title, description, tag) => {
-        console.log("Adding a new note");
-        const note = {
-            "_id": "65412472102dd91bbe258b86",
-            "user": "65400ab2961d7a194f13022d",
-            "title": title,
-            "description": description,
-            "tag": tag,
-            "date": "2023-10-31T15:59:46.445Z",
-            "__v": 0
-        };
+    const getNotes = async () => {
+        //API call to backend
+        const response = await fetch(`${host}/api/notes/fetchallnotes`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token")
+            }
+        })
+
+        const allNotes = await response.json();
+        setNotes(notes.concat(allNotes));
+    }
+
+    //Add a note
+    const addNote = async (title, description, tag) => {
+        //API call to backend
+        const response = await fetch(`${host}/api/notes/addnote`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token")
+            },
+            body: JSON.stringify({ title, description, tag })
+        })
+
+        const note = await response.json();
         setNotes(notes.concat(note))
     }
+
     //Delete a note
-    const deleteNote = () => {
+    const deleteNote = async (id) => {
+        //API call to backend
+        // eslint-disable-next-line
+        const response = await fetch(`${host}/api/notes/deletenote/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token")
+            }
+        })
 
+        // const json = await response.json();
+
+        //logic to delete in client
+        const newNotes = notes.filter((note) => {
+            return note._id !== id;
+        })
+        setNotes(newNotes);
     }
-    //Edit a note
-    const editNote = () => {
 
+    //Edit a note
+    const editNote = async (id, title, description, tag) => {
+        //API call to backend
+        // eslint-disable-next-line
+        const response = await fetch(`${host}/api/notes/updatenote/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token")
+            },
+            body: JSON.stringify({ title, description, tag })
+        })
+        // const json = await response.json();
+
+        let newNotes = JSON.parse(JSON.stringify(notes));
+        //Logic to edit in client
+        for (let index = 0; index < newNotes.length; index++) {
+            const element = newNotes[index];
+            if (element._id === id) {
+                newNotes[index].title = title;
+                newNotes[index].description = description;
+                newNotes[index].tag = tag;
+                break;
+            }
+        }
+        setNotes(newNotes);
     }
 
     return (
-        <NoteContext.Provider value={{ notes, addNote, editNote, deleteNote }}>
+        <NoteContext.Provider value={{ notes, getNotes, addNote, editNote, deleteNote }}>
             {props.children}
         </NoteContext.Provider>
     )
